@@ -141,7 +141,6 @@ architecture rtl of processorRV is
   signal A1_EX, A2_EX : std_logic_vector(4 downto 0);
 
   -- Señales para EX/MEM Stage
-  signal ALUOp_MEM: std_logic_vector(2 downto 0);
   signal Funct3_MEM: std_logic_vector (2 downto 0);
   signal Funct7_MEM: std_logic_vector (6 downto 0);
   signal OpA_MEM, OpB_MEM: std_logic_vector (31 downto 0);
@@ -169,7 +168,7 @@ begin
       instruccion_ID <= (others=>'0');
     elsif rising_edge(clk) then
       pc_ID <= PC_plus4;
-      instrucción_ID <= IDataIn;
+      instruccion_ID <= IDataIn;
     end if;
   end process;
   ---------------------------------------------------------------------------------------------------
@@ -186,7 +185,7 @@ begin
       RegWrite_EX <= '0';
       ALUOp_EX <= (others=>'0');
       -- PC:
-      PC_EX <= (others=>'0');
+      --PC_EX <= (others=>'0');
       -- Banco de registros:
       OpA_EX <= (others=>'0');
       OpB_EX <= (others=>'0');
@@ -204,7 +203,7 @@ begin
       RegWrite_EX <= RegWrite;
       ALUOp_EX <= ALUOp;
       -- PC:
-      pc_EX <= pc_ID;
+      --pc_EX <= pc_ID;
       -- Banco de registros:
       OpA_EX <= OpA;
       OpB_EX <= OpB;
@@ -237,12 +236,12 @@ begin
       RegWrite_MEM <= '0';
       ALUOp_MEM <= (others=>'0');
       -- PC:
-      pc_MEM <= (others=>'0');
+      --pc_MEM <= (others=>'0');
     elsif rising_edge(clk) then
       -- ALU:
       ALUOp_MEM <= ALUOp_EX;
       Funct3_MEM <= Instruccion_ID(14 downto 12);
-      Funct7_MEM <= Instruccion_ID(31 downto 24);
+      Funct7_MEM <= Instruccion_ID(31 downto 25);
       OpA_MEM <= OpA_EX;
       OpB_MEM <= OpB_EX;
       Control_MEM <= ALUControl;
@@ -255,7 +254,9 @@ begin
       ALUSrc_MEM <= ALUSrc_EX;
       RegWrite_MEM <= RegWrite_EX;
       -- PC:
-      pc_MEM <= pc_EX;
+      --pc_MEM <= pc_EX;
+    end if;
+  end process;
   ---------------------------------------------------------------------------------------------------
   -- Pipeline reg: MEM/WB
   MEM_WB_reg: process(clk,reset)
@@ -268,7 +269,8 @@ begin
       ResultSrc_WB <= ResultSrc_MEM;
       RegWrite_WB <= RegWrite_MEM;
       Result_WB <= Result_MEM;
-      
+    end if;
+  end process;  
   ---------------------------------------------------------------------------------------------------
 
   -- Program Counter
