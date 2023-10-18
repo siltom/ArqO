@@ -93,66 +93,137 @@ architecture rtl of processorRV is
     );
   end component Imm_Gen;
 
-  signal Alu_Op1      : std_logic_vector(31 downto 0);
-  signal Alu_Op2      : std_logic_vector(31 downto 0);
-  signal Alu_ZERO     : std_logic;
-  signal Alu_SIGN     : std_logic;
-  signal AluControl   : std_logic_vector(3 downto 0);
-  signal reg_RD_data  : std_logic_vector(31 downto 0);
-
-  signal branch_true    : std_logic;
-  signal PC_next        : std_logic_vector(31 downto 0);
-  signal PC_reg         : std_logic_vector(31 downto 0);
-  signal PC_plus4       : std_logic_vector(31 downto 0);
-
+  ------------- Señales-------------------
+  --ALU:
+  signal Alu_Op1       : std_logic_vector(31 downto 0); -- ALUSrcA
+  signal Alu_Op2        : std_logic_vector(31 downto 0); -- ALUSrcB
+  signal Alu_ZERO       : std_logic;                     -- ALUZero
+  signal Alu_SIGN       : std_logic;                     -- ALUSign
+  signal AluControl     : std_logic_vector(3 downto 0);  -- ALUControl 
+  signal Alu_Res        : std_logic_vector(31 downto 0); -- ALUResult
+  --Read Data:
+  signal reg_RD_data    : std_logic_vector(31 downto 0); -- ReadData
+  --Instruction memory:
+  signal branch_true    : std_logic;                     -- Decision_jump
+  signal PC_next        : std_logic_vector(31 downto 0); -- PCNext
+  signal PC_reg         : std_logic_vector(31 downto 0); -- PC
+  signal PC_plus4       : std_logic_vector(31 downto 0); -- PCPlus4
   signal Instruction    : std_logic_vector(31 downto 0); -- La instrucción desde lamem de instr
+  --Immediate Generator:
   signal Imm_ext        : std_logic_vector(31 downto 0); -- La parte baja de la instrucción extendida de signo
-  signal reg_RS1        : std_logic_vector(31 downto 0);
-  signal reg_RS2        : std_logic_vector(31 downto 0);
-
+  --Register Bank:
+  signal reg_RS1        : std_logic_vector(31 downto 0); -- RD1
+  signal reg_RS2        : std_logic_vector(31 downto 0); -- RD2
+  signal RS1            : std_logic_vector(4 downto 0);  -- RS1
+  signal RS2            : std_logic_vector(4 downto 0);  -- RS2
+  signal RD             : std_logic_vector(4 downto 0);  -- We3
+  --Datos de memoria:
   signal dataIn_Mem     : std_logic_vector(31 downto 0); -- Dato desde memoria
-  signal Addr_BranchJal : std_logic_vector(31 downto 0);
-
-  signal Ctrl_Jal, Ctrl_Jalr, Ctrl_Branch, Ctrl_MemWrite, Ctrl_MemRead,  Ctrl_ALUSrc, Ctrl_RegWrite : std_logic;
-  
-  signal Ctrl_ALUOp     : std_logic_vector(2 downto 0);
-  signal Ctrl_PcLui     : std_logic_vector(1 downto 0);
-  signal Ctrl_ResSrc    : std_logic_vector(1 downto 0);
-
-  signal Addr_Jalr      : std_logic_vector(31 downto 0);
-  signal Addr_Jump_dest : std_logic_vector(31 downto 0);
-  signal decision_Jump  : std_logic;
-  signal Alu_Res        : std_logic_vector(31 downto 0);
-  -- Instruction fields:
-  signal Funct3         : std_logic_vector(2 downto 0);
-  signal Funct7         : std_logic_vector(6 downto 0);
-  signal RS1, RS2, RD   : std_logic_vector(4 downto 0);
+  --Saltos:
+  signal Addr_BranchJal : std_logic_vector(31 downto 0); -- Addr_BranchJal
+  signal Addr_Jalr      : std_logic_vector(31 downto 0); -- Addr_Jalr
+  signal Addr_Jump_dest : std_logic_vector(31 downto 0); -- Addr_Jump
+  signal decision_Jump  : std_logic;                     -- Decision_Jump
+  --Control Unit:
+  signal Ctrl_Jal       : std_logic;                     -- Jal
+  signal Ctrl_Jalr      : std_logic;                     -- Jalr
+  signal Ctrl_Branch    : std_logic;                     -- Branch
+  signal Ctrl_MemWrite  : std_logic;                     -- MemWrite
+  signal Ctrl_MemRead   : std_logic;                     -- MemRead
+  signal Ctrl_ALUSrc    : std_logic;                     -- ALUSrc
+  signal Ctrl_RegWrite  : std_logic;                     -- RegWrite
+  signal Ctrl_ALUOp     : std_logic_vector(2 downto 0);  -- ALUOp
+  signal Ctrl_PcLui     : std_logic_vector(1 downto 0);  -- PCIui
+  signal Ctrl_ResSrc    : std_logic_vector(1 downto 0);  -- ResSrc
+  --ALU Control (Instruction fields):
+  signal Funct3         : std_logic_vector(2 downto 0);  -- Funct3
+  signal Funct7         : std_logic_vector(6 downto 0);  -- Funct7
 
 
   -- Señales para IF/ID Stage
-  signal pc_ID          : std_logic_vector(31 downto 0);
-  signal instruccion_ID : std_logic_vector(31 downto 0);
+  --Instruction memory:
+  signal PC_reg_IF      : std_logic_vector(31 downto 0); -- PC_IF
+  signal PC_reg_ID      : std_logic_vector(31 downto 0); -- PC_ID
+  signal PC_plus4_IF    : std_logic_vector(31 downto 0); -- PCPlus4_IF
+  signal PC_plus4_ID    : std_logic_vector(31 downto 0); -- PCPlus4_ID
+  signal Instruction_IF : std_logic_vector(31 downto 0); -- Instr_IF
+  signal Instruction_ID : std_logic_vector(31 downto 0); -- Instr_ID
   
   -- Señales para ID/EX Stage
-  signal Branch_EX, ResultSrc_EX, MemWrite_EX, MemRead_EX, ALUSrc_EX, RegWrite_EX: std_logic;
-  signal ALUOp_EX: std_logic_vector(3 downto 0);
-  signal pc_EX: std_logic_vector(31 downto 0);
-  signal OpA_EX, OpB_EX, Imm_ext_EX: std_logic_vector(31 downto 0);
-  signal A1_EX, A2_EX : std_logic_vector(4 downto 0);
+  --Instruction memory:
+  signal PC_reg_EX      : std_logic_vector(31 downto 0); -- PC_EX
+  signal PC_plus4_EX    : std_logic_vector(31 downto 0); -- PCPlus4_EX
+  signal Instruction_EX1: std_logic_vector(2 downto 0); -- Instr_EX1
+  signal Instruction_EX2: std_logic_vector(4 downto 0); -- Instr_EX2
+  --Immediate Generator:
+  signal Imm_ext_ID     : std_logic_vector(31 downto 0); -- Imm_Gen_ID
+  signal Imm_ext_EX     : std_logic_vector(31 downto 0); -- Imm_Gen_EX
+  --Register Bank:
+  signal reg_RS1_ID     : std_logic_vector(31 downto 0); -- RD1_ID
+  signal reg_RS1_EX     : std_logic_vector(31 downto 0); -- RD1_EX
+  signal reg_RS2_ID     : std_logic_vector(31 downto 0); -- RD2_ID
+  signal reg_RS2_EX     : std_logic_vector(31 downto 0); -- RD2_EX
+  --Control Unit:
+  signal Ctrl_Jal_ID    : std_logic;                     -- Jal_ID
+  signal Ctrl_Jal_EX    : std_logic;                     -- Jal_EX
+  signal Ctrl_Jalr_ID   : std_logic;                     -- Jalr_ID
+  signal Ctrl_Jalr_EX   : std_logic;                     -- Jalr_EX
+  signal Ctrl_Branch_ID : std_logic;                     -- Branch_ID
+  signal Ctrl_Branch_EX : std_logic;                     -- Branch_EX
+  signal Ctrl_MemWrite_ID: std_logic;                     -- MemWrite_ID
+  signal Ctrl_MemWrite_EX: std_logic;                     -- MemWrite_EX
+  signal Ctrl_MemRead_ID: std_logic;                     -- MemRead_ID
+  signal Ctrl_MemRead_EX: std_logic;                     -- MemRead_EX
+  signal Ctrl_ALUSrc_ID : std_logic;                     -- ALUSrc_ID
+  signal Ctrl_ALUSrc_EX : std_logic;                     -- ALUSrc_EX
+  signal Ctrl_RegWrite_ID: std_logic;                     -- RegWrite_ID
+  signal Ctrl_RegWrite_EX: std_logic;                     -- RegWrite_EX
+  signal Ctrl_ALUOp_ID  : std_logic_vector(2 downto 0);  -- ALUOp_ID
+  signal Ctrl_ALUOp_EX  : std_logic_vector(2 downto 0);  -- ALUOp_EX
+  signal Ctrl_PcLui_ID  : std_logic_vector(1 downto 0);  -- PCIui_ID
+  signal Ctrl_PcLui_EX  : std_logic_vector(1 downto 0);  -- PCIui_EX
+  signal Ctrl_ResSrc_ID : std_logic_vector(1 downto 0);  -- ResSrc_ID
+  signal Ctrl_ResSrc_EX : std_logic_vector(1 downto 0);  -- ResSrc_EX
 
   -- Señales para EX/MEM Stage
-  signal Funct3_MEM: std_logic_vector (2 downto 0);
-  signal Funct7_MEM: std_logic_vector (6 downto 0);
-  signal OpA_MEM, OpB_MEM: std_logic_vector (31 downto 0);
-  signal Control_MEM: std_logic_vector (3 downto 0);
-  signal Result_MEM: std_logic_vector (31 downto 0);
-  signal Branch_MEM, ResultSrc_MEM, MemWrite_MEM, MemRead_MEM, ALUSrc_MEM, RegWrite_MEM: std_logic;
-  signal ALUOp_MEM: std_logic_vector(3 downto 0);
-  signal pc_MEM: std_logic_vector(31 downto 0);
+  --ALU:
+  signal Alu_ZERO_EX    : std_logic;                     -- ALUZero_EX
+  signal Alu_ZERO_MEM   : std_logic;                     -- ALUZero_MEM
+  signal Alu_SIGN_EX    : std_logic;                     -- ALUSign_EX
+  signal Alu_SIGN_MEM   : std_logic;                     -- ALUSign_MEM
+  signal Alu_Res_EX     : std_logic_vector(31 downto 0); -- ALUResult_EX
+  signal Alu_Res_MEM    : std_logic_vector(31 downto 0); -- ALUResult_MEM
+  --Instruction memory:
+  signal PC_plus4_MEM   : std_logic_vector(31 downto 0); -- PCPlus4_MEM
+  signal Instruction_MEM1: std_logic_vector(2 downto 0); -- Instr_MEM1
+  signal Instruction_MEM2: std_logic_vector(4 downto 0); -- Instr_MEM2
+  --Register Bank:
+  signal reg_RS2_MEM    : std_logic_vector(31 downto 0); -- RD2_MEM
+  --Saltos:
+  signal Addr_Jump_dest_EX: std_logic_vector(31 downto 0); -- Addr_Jump_EX
+  signal Addr_Jump_dest_MEM: std_logic_vector(31 downto 0); -- Addr_Jump_MEM
+  --Control Unit:
+  signal Ctrl_Jal_MEM   : std_logic;                     -- Jal_MEM
+  signal Ctrl_Jalr_MEM  : std_logic;                     -- Jalr_MEM
+  signal Ctrl_Branch_MEM: std_logic;                     -- Branch_MEM
+  signal Ctrl_MemWrite_MEM: std_logic;                     -- MemWrite_MEM
+  signal Ctrl_MemRead_MEM: std_logic;                     -- MemRead_MEM
+  signal Ctrl_RegWrite_MEM: std_logic;                     -- RegWrite_MEM
+  signal Ctrl_ResSrc_MEM: std_logic_vector(1 downto 0);  -- ResSrc_MEM
 
   -- Señales para MEM/WB Stage
-  signal ResultSrc_WB, RegWrite_WB: std_logic;
-  signal Result_WB: std_logic_vector(31 downto 0);
+  --ALU:
+  signal Alu_Res_WB     : std_logic_vector(31 downto 0); -- ALUResult_WB
+  --Read Data:
+  signal reg_RD_data_MEM: std_logic_vector(31 downto 0); -- ReadData_MEM
+  signal reg_RD_data_WB: std_logic_vector(31 downto 0); -- ReadData_WB
+  --Instruction memory:
+  signal PC_plus4_WB    : std_logic_vector(31 downto 0); -- PCPlus4_WB
+  signal Instruction_WB : std_logic_vector(4 downto 0); -- Instr_WB
+  --Control Unit:
+  signal Ctrl_RegWrite_WB: std_logic;                     -- RegWrite_WB
+  signal Ctrl_ResSrc_WB : std_logic_vector(1 downto 0);  -- ResSrc_WB
+
 
 begin
 
@@ -164,11 +235,15 @@ begin
   IF_ID_reg: process(clk,reset)
   begin
     if reset = '1' then
-      pc_ID <= (others=>'0');
-      instruccion_ID <= (others=>'0');
+      --Instruction memory:
+      PC_reg_ID <= (others=>'0'); -- PC_ID
+      PC_plus4_ID <= (others=>'0'); -- PCPlus4_ID
+      Instruction_ID <= (others=>'0'); -- Instr_ID
     elsif rising_edge(clk) then
-      pc_ID <= PC_plus4;
-      instruccion_ID <= IDataIn;
+      --Instruction memory:
+      PC_reg_ID <= PC_reg_IF; -- PC_ID
+      PC_plus4_ID <= PC_plus4_IF; -- PCPlus4_ID
+      Instruction_ID <= Instr_IF; -- Instr_ID
     end if;
   end process;
   ---------------------------------------------------------------------------------------------------
@@ -176,85 +251,97 @@ begin
   ID_EX_reg: process(clk,reset)
   begin
     if reset = '1' then
-      -- Unidad de Control:
-      Branch_EX <= '0';
-      ResultSrc_EX <= '0';
-      MemWrite_EX <= '0';
-      MemRead_EX <= '0';
-      ALUSrc_EX <= '0';
-      RegWrite_EX <= '0';
-      ALUOp_EX <= (others=>'0');
-      -- PC:
-      --PC_EX <= (others=>'0');
-      -- Banco de registros:
-      OpA_EX <= (others=>'0');
-      OpB_EX <= (others=>'0');
-      A1_EX <= (others=>'0');
-      A2_EX <= (others=>'0');
-      -- Generador de inmediatos:
-      Imm_ext_EX <= (others=>'0');
+      --Instruction memory:
+      PC_reg_EX <= (others=>'0'); -- PC_EX
+      PC_plus4_EX <= (others=>'0'); -- PCPlus4_EX
+      Instruction_EX1 <= (others=>'0'); -- Instr_EX1
+      Instruction_EX2 <= (others=>'0'); -- Instr_EX2
+      --Immediate Generator:
+      Imm_ext_EX <= (others=>'0'); -- Imm_Gen_EX
+      --Register Bank:
+      reg_RS1_EX <= (others=>'0'); -- RD1_EX
+      reg_RS2_EX <= (others=>'0'); -- RD2_EX
+      --Control Unit:
+      Ctrl_Jal_EX <= '0'; -- Jal_EX
+      Ctrl_Jalr_EX <= '0'; -- Jalr_EX
+      Ctrl_Branch_EX <= '0'; -- Branch_EX
+      Ctrl_MemWrite_EX <= '0'; -- MemWrite_EX
+      Ctrl_MemRead_EX <= '0'; -- MemRead_EX
+      Ctrl_ALUSrc_EX <= '0'; -- ALUSrc_EX
+      Ctrl_RegWrite_EX <= '0'; -- RegWrite_EX
+      Ctrl_ALUOp_EX <= (others=>'0'); -- ALUOp_EX
+      Ctrl_PcLui_EX <= (others=>'0'); -- PCIui_EX
+      Ctrl_ResSrc_EX <= (others=>'0'); -- ResSrc_EX
     elsif rising_edge(clk) then
-      -- Unidad de Control:
-      Branch_EX <= Branch;
-      ResultSrc_EX <= ResultSrc;
-      MemWrite_EX <= MemWrite;
-      MemRead_EX <= MemRead;
-      ALUSrc_EX <= ALUSrc;
-      RegWrite_EX <= RegWrite;
-      ALUOp_EX <= ALUOp;
-      -- PC:
-      --pc_EX <= pc_ID;
-      -- Banco de registros:
-      OpA_EX <= OpA;
-      OpB_EX <= OpB;
-      A1_EX <= A1;
-      A2_EX <= A2;
-      -- Generador de inmediatos:
-      Imm_ext_EX <= Imm_ext;
+      --Instruction memory:
+      PC_reg_EX <= PC_reg_ID; -- PC_EX
+      PC_plus4_EX <= PC_plus4_ID; -- PCPlus4_EX
+      Instruction_EX1 <= Instruction_ID(14 downto 12); -- Instr_EX1
+      Instruction_EX2 <= Instruction_ID(11 downto 7); -- Instr_EX2
+      --Immediate Generator:
+      Imm_ext_EX <= Imm_ext_ID; -- Imm_Gen_EX
+      --Register Bank:
+      reg_RS1_EX <= RD1_ID; -- RD1_EX
+      reg_RS2_EX <= RD2_ID; -- RD2_EX
+      --Control Unit:
+      Ctrl_Jal_EX <= Ctrl_Jal_ID; -- Jal_EX
+      Ctrl_Jalr_EX <= Ctrl_Jalr_ID; -- Jalr_EX
+      Ctrl_Branch_EX <= Ctrl_Branch_ID; -- Branch_EX
+      Ctrl_MemWrite_EX <= Ctrl_MemWrite_ID; -- MemWrite_EX
+      Ctrl_MemRead_EX <= Ctrl_MemRead_ID; -- MemRead_EX
+      Ctrl_ALUSrc_EX <= Ctrl_ALUSrc_ID; -- ALUSrc_EX
+      Ctrl_RegWrite_EX <= Ctrl_RegWrite_ID; -- RegWrite_EX
+      Ctrl_ALUOp_EX <= Ctrl_ALUOp_ID; -- ALUOp_EX
+      Ctrl_PcLui_EX <= Ctrl_PcLui_ID; -- PCIui_EX
+      Ctrl_ResSrc_EX <= Ctrl_ResSrc_ID; -- ResSrc_EX
     end if;
   end process;
-
   ---------------------------------------------------------------------------------------------------
   -- Pipeline reg: EX/MEM
   EX_MEM_reg: process(clk,reset)
   begin
     if reset = '1' then
-      -- ALU:
-      ALUOp_MEM <= (others=>'0');
-      Funct3_MEM <= (others=>'0');
-      Funct7_MEM <= (others=>'0');
-      OpA_MEM <= (others=>'0');
-      OpB_MEM <= (others=>'0');
-      Control_MEM <= (others=>'0');
-      Result_MEM <= (others=>'0');
-      -- Unidad de Control:
-      Branch_MEM <= '0';
-      ResultSrc_MEM <= '0';
-      MemWrite_MEM <= '0';
-      MemRead_MEM <= '0';
-      ALUSrc_MEM <= '0';
-      RegWrite_MEM <= '0';
-      ALUOp_MEM <= (others=>'0');
-      -- PC:
-      --pc_MEM <= (others=>'0');
+      --ALU:
+      Alu_ZERO_MEM <= '0'; -- ALUZero_MEM
+      Alu_SIGN_MEM <= '0'; -- ALUSign_MEM
+      Alu_Res_MEM <= (others=>'0'); -- ALUResult_MEM
+      --Instruction memory:
+      PC_plus4_MEM <= (others=>'0'); -- PCPlus4_MEM
+      Instruction_MEM1 <= (others=>'0'); -- Instr_MEM1
+      Instruction_MEM2 <= (others=>'0'); -- Instr_MEM2
+      --Register Bank:
+      reg_RS2_MEM <= (others=>'0'); -- RD2_MEM
+      --Saltos:
+      Addr_Jump_dest_MEM <= (others=>'0'); -- Addr_Jump_MEM
+      --Control Unit:
+      Ctrl_Jal_MEM <= '0'; -- Jal_MEM
+      Ctrl_Jalr_MEM <= '0'; -- Jalr_MEM
+      Ctrl_Branch_MEM <= '0'; -- Branch_MEM
+      Ctrl_MemWrite_MEM <= '0'; -- MemWrite_MEM
+      Ctrl_MemRead_MEM <= '0'; -- MemRead_MEM
+      Ctrl_RegWrite_MEM <= '0'; -- RegWrite_MEM
+      Ctrl_ResSrc_MEM <= (others=>'0'); -- ResSrc_MEM
     elsif rising_edge(clk) then
-      -- ALU:
-      ALUOp_MEM <= ALUOp_EX;
-      Funct3_MEM <= Instruccion_ID(14 downto 12);
-      Funct7_MEM <= Instruccion_ID(31 downto 25);
-      OpA_MEM <= OpA_EX;
-      OpB_MEM <= OpB_EX;
-      Control_MEM <= ALUControl;
-      Result_MEM <= Result;
-      -- Unidad de Control:
-      Branch_MEM <= Branch_EX;
-      ResultSrc_MEM <= ResultSrc_EX;
-      MemWrite_MEM <= MemWrite_EX;
-      MemRead_MEM <= MemRead_EX;
-      ALUSrc_MEM <= ALUSrc_EX;
-      RegWrite_MEM <= RegWrite_EX;
-      -- PC:
-      --pc_MEM <= pc_EX;
+      --ALU:
+      Alu_ZERO_MEM <= Alu_ZERO_EX; -- ALUZero_MEM
+      Alu_SIGN_MEM <= Alu_SIGN_EX; -- ALUSign_MEM
+      Alu_Res_MEM <= Alu_Res_EX; -- ALUResult_MEM
+      --Instruction memory:
+      PC_plus4_MEM <= PC_plus4_EX; -- PCPlus4_MEM
+      Instruction_MEM1 <= Instruction_EX1; -- Instr_MEM1
+      Instruction_MEM2 <= Instruction_EX2; -- Instr_MEM2
+      --Register Bank:
+      reg_RS2_MEM <= reg_RS2_EX; -- RD2_MEM
+      --Saltos:
+      Addr_Jump_dest_MEM <= Addr_Jump_dest_EX; -- Addr_Jump_MEM
+      --Control Unit:
+      Ctrl_Jal_MEM <= Ctrl_Jal_EX; -- Jal_MEM
+      Ctrl_Jalr_MEM <= Ctrl_Jalr_EX; -- Jalr_MEM
+      Ctrl_Branch_MEM <= Ctrl_Branch_EX; -- Branch_MEM
+      Ctrl_MemWrite_MEM <= Ctrl_MemWrite_EX; -- MemWrite_MEM
+      Ctrl_MemRead_MEM <= Ctrl_MemRead_EX; -- MemRead_MEM
+      Ctrl_RegWrite_MEM <= Ctrl_RegWrite_EX; -- RegWrite_MEM
+      Ctrl_ResSrc_MEM <= Ctrl_ResSrc_EX; -- ResSrc_MEM
     end if;
   end process;
   ---------------------------------------------------------------------------------------------------
@@ -262,17 +349,31 @@ begin
   MEM_WB_reg: process(clk,reset)
   begin
     if reset = '1' then
-      ResultSrc_WB <= '0';
-      RegWrite_WB <= '0';
-      Result_WB <= (others => '0');
+      --ALU:
+      Alu_Res_WB <= (others=>'0'); -- ALUResult_WB
+      --Read Data:
+      reg_RD_data_WB <= (others=>'0'); -- ReadData_WB
+      --Instruction memory:
+      PC_plus4_WB <= (others=>'0'); -- PCPlus4_WB
+      Instruction_WB <= (others=>'0'); -- Instr_WB
+      --Control Unit:
+      Ctrl_RegWrite_WB <= '0'; -- RegWrite_WB
+      Ctrl_ResSrc_WB <= (others=>'0'); -- ResSrc_WB
     elsif rising_edge(clk) then
-      ResultSrc_WB <= ResultSrc_MEM;
-      RegWrite_WB <= RegWrite_MEM;
-      Result_WB <= Result_MEM;
+      --ALU:
+      Alu_Res_WB <= Alu_Res_MEM; -- ALUResult_WB
+      --Read Data:
+      reg_RD_data_WB <= reg_RD_data_MEM; -- ReadData_WB
+      --Instruction memory:
+      PC_plus4_WB <= PC_plus4_MEM; -- PCPlus4_WB
+      Instruction_WB <= Instruction_MEM2; -- Instr_WB
+      --Control Unit:
+      Ctrl_RegWrite_WB <= Ctrl_RegWrite_MEM; -- RegWrite_WB
+      Ctrl_ResSrc_WB <= Ctrl_ResSrc_MEM; -- ResSrc_WB
     end if;
-  end process;  
-  ---------------------------------------------------------------------------------------------------
+  end process;
 
+  ---------------------------------------------------------------------------------------------------
   -- Program Counter
   PC_reg_proc: process(Clk, Reset)
   begin
