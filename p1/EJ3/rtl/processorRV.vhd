@@ -155,7 +155,7 @@ architecture rtl of processorRV is
   signal PC_plus4_EX    : std_logic_vector(31 downto 0); -- PCPlus4_EX
   signal Instruction_EX1: std_logic_vector(2 downto 0); -- Instr_EX1
   signal Instruction_EX2: std_logic_vector(4 downto 0); -- Instr_EX2
-  signal Instruction_EX3: std_logic_vector(7 downto 0); -- Instr_EX3
+  signal Instruction_EX3: std_logic_vector(6 downto 0); -- Instr_EX3
   --Immediate Generator:
   signal Imm_ext_ID     : std_logic_vector(31 downto 0); -- Imm_Gen_ID
   signal Imm_ext_EX     : std_logic_vector(31 downto 0); -- Imm_Gen_EX
@@ -244,7 +244,7 @@ begin
       --Instruction memory:
       PC_reg_ID <= PC_reg_IF; -- PC_ID
       PC_plus4_ID <= PC_plus4_IF; -- PCPlus4_ID
-      Instruction_ID <= Instr_IF; -- Instr_ID
+      Instruction_ID <= Instruction_IF; -- Instr_ID
     end if;
   end process;
   ---------------------------------------------------------------------------------------------------
@@ -481,7 +481,7 @@ begin
   DRdEn      <= Ctrl_MemRead_MEM;
   dataIn_Mem <= DDataIn;
 
-  reg_RD_data_EX <= dataIn_Mem when Ctrl_ResSrc_WB = "01" else
+  reg_RD_data_MEM <= dataIn_Mem when Ctrl_ResSrc_WB = "01" else
                  PC_plus4_WB   when Ctrl_ResSrc_WB = "10" else 
                  Alu_Res_WB; -- When 00
 
