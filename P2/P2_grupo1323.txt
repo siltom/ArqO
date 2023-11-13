@@ -1,0 +1,7 @@
+Arquitectura de ordenadores
+
+Grupo: 1323
+Pareja: 12
+Integrantes: Silvia Tomey Prieto
+
+*La totalidad del código escrito sobre el procesador que se nos entregó para la práctica 1 y 2 es 100% de mi autoría*
