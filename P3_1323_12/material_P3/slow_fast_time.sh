@@ -1,4 +1,4 @@
-# Ejemplo script, para P3 arq 2019-2020
+# Script para P3 ejercicio 1
 
 #!/bin/bash
 
@@ -17,7 +17,6 @@ touch $fDAT
 
 echo "Running slow and fast..."
 # bucle para N desde P hasta Q 
-#for N in $(seq $Ninicio $Npaso $Nfinal);
 for ((N = Ninicio ; N <= Nfinal ; N += Npaso)); do
 	echo "N: $N / $Nfinal..."
 	
