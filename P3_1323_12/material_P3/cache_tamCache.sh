@@ -17,6 +17,10 @@ fPNGW=cache_escritura.png
 # borrar ficheros ficheros PNG
 rm -f fPNGR fPNGW
  
+# generar el ficheros DAT vacíos
+touch "slow_out.dat"
+touch "fast_out.dat"
+
 echo "Running cache -> TamCache..."
 for ((C = CachInicio ; C <= CachFinal ; C = C*2)); do
     fDAT=cache_$C.dat
