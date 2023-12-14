@@ -1,25 +1,33 @@
 // ----------- Arqo P4-----------------------
-// pescalar_par2
+// pescalar_par3
 //
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "arqo4.h"
 
-int main(void)
+int main( int argc, char *argv[])
 {
 	int nproc;
+	int t;
 	float *A=NULL, *B=NULL;
 	long long k=0;
 	struct timeval fin,ini;
 	double sum=0;
      	
-       
-	A = generateVectorOne(M);
-	B = generateVectorOne(M);
+	if( argc!=2 )
+	{
+		printf("Error: ./%s <vector size>\n", argv[0]);
+		return -1;
+	}
+	
+	t=atoi(argv[1]);
+	
+	A = generateVectorOne(t);
+	B = generateVectorOne(t);
 	if ( !A || !B )
 	{
-		printf("Error when allocationg matrix\n");
+		printf("Error when allocationg vectors\n");
 		freeVector(A);
 		freeVector(B);
 		return -1;
@@ -35,7 +43,7 @@ int main(void)
 	sum = 0;
 	
     #pragma omp parallel for reduction(+:sum)
-	for(k=0;k<M;k++)
+	for(k=0;k<t;k++)
 	{
 		sum = sum + A[k]*B[k];
 	}
