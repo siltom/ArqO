@@ -1,5 +1,5 @@
 /*********************************************************/
-/* Cálculo PI: Método de integración - Version OpenMP	 */
+/* Cï¿½lculo PI: Mï¿½todo de integraciï¿½n - Version OpenMP	 */
 /* Work sharing 				 	 */
 /*********************************************************/
 
@@ -10,7 +10,8 @@
 
 int main( int argc, char *argv[] ) 
 {
-	int i, n = 100000000, numProcs, numThreads;
+	int i, n = 100000000, numProcs;
+	int numThreads;
 	double h, pi, *sum = NULL,t = 0;
 	struct timeval t1,t2;
 
